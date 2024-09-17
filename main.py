@@ -1,6 +1,11 @@
+import csv
+import io
+
 import requests
 import datetime
 from time import sleep
+import pandas as pd
+import analyse
 
 baseurl = "https://www.nseindia.com/"
 url = f"https://www.nseindia.com/api/option-chain-equities?symbol=__stock__"
@@ -26,23 +31,23 @@ def capture_options(stock, session, cookies):
             if 'PE' in data and expiryDate in data['expiryDate']:
                 # Filtering by key
                 filtered_data = "{stock},{price},{strikePrice},{openInterest},PE".format(stock=stock,
-                                                                                      strikePrice=data['PE'][
-                                                                                          'strikePrice'],
-                                                                                      openInterest=data['PE'][
-                                                                                          'openInterest'],
-                                                                                      price=data['PE'][
-                                                                                          'underlyingValue'])
+                                                                                         strikePrice=data['PE'][
+                                                                                             'strikePrice'],
+                                                                                         openInterest=data['PE'][
+                                                                                             'openInterest'],
+                                                                                         price=data['PE'][
+                                                                                             'underlyingValue'])
                 return_data.append(filtered_data)
 
             if 'CE' in data and expiryDate in data['expiryDate']:
                 # Filtering by key
                 filtered_data = "{stock},{price},{strikePrice},{openInterest},CE".format(stock=stock,
-                                                                                      strikePrice=data['CE'][
-                                                                                          'strikePrice'],
-                                                                                      openInterest=data['CE'][
-                                                                                          'openInterest'],
-                                                                                      price=data['CE'][
-                                                                                          'underlyingValue'])
+                                                                                         strikePrice=data['CE'][
+                                                                                             'strikePrice'],
+                                                                                         openInterest=data['CE'][
+                                                                                             'openInterest'],
+                                                                                         price=data['CE'][
+                                                                                             'underlyingValue'])
 
                 return_data.append(filtered_data)
 
@@ -62,19 +67,38 @@ if __name__ == '__main__':
         xtime = datetime.datetime.now()
         x_label = xtime.strftime("%d%H%M")
         print(x_label)
+        try:
+            session = requests.Session()
+            request = session.get(baseurl, headers=headers, timeout=5)
+            print('Done baseurl ......')
+            cookies = dict(request.cookies)
 
-        session = requests.Session()
-        request = session.get(baseurl, headers=headers, timeout=5)
-        print('Done baseurl ......')
-        cookies = dict(request.cookies)
+            for stock in stocks:
+                expiryDate, return_data = capture_options(stock, session, cookies)
+                expiryDateStr = datetime.datetime.strptime(expiryDate, '%d-%b-%Y').strftime('%Y%m%d')
+                file_name = expiryDateStr + '_options_data.csv'
+                with open(file_name, 'a') as outfile:
+                    for line in return_data:
+                        outfile.write(x_label + ',' + line)
+                        outfile.write('\n')
 
-        for stock in stocks:
-            expiryDate, return_data = capture_options(stock, session, cookies)
-            expiryDateStr = datetime.datetime.strptime(expiryDate, '%d-%b-%Y').strftime('%Y%m%d')
+                dataframe = pd.DataFrame([str.split(",") for str in return_data])
+                dataframe.columns = ["stock", "price", "strike", "openint", "type"]
+                dataframe['runid'] = x_label
+                # set dtypes for each column
+                dataframe['runid'] = dataframe['runid'].astype(int)
+                dataframe['strike'] = dataframe['strike'].astype(int)
+                dataframe['openint'] = dataframe['openint'].astype(float)
+                dataframe['price'] = dataframe['price'].astype(float)
 
-            file_name = expiryDateStr + '_options_data.csv'
-            with open(file_name, 'a') as outfile:
-                for line in return_data:
-                    outfile.write(x_label + ',' + line)
-                    outfile.write('\n')
+                loss_data = analyse.calculate_loss(dataframe)
+                file_name = expiryDateStr + '_loss_data.csv'
+                with open(file_name, 'a') as outfile:
+                    for data in loss_data:
+                        outfile.write(stock + ',' + str(data[0])+ ',' + str(data[1])+ ',' + str(data[2])+ ',' + str(data[3]))
+                        outfile.write('\n')
+
+        except Exception as err:
+            print(f"Unexpected {err=}, {type(err)=}")
+
         sleep(900)

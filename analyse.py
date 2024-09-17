@@ -1,7 +1,6 @@
 import matplotlib.pyplot as mp
 import pandas as pd
 import seaborn as sb
-import matplotlib.pyplot as plt
 import numpy as np
 
 
@@ -15,24 +14,37 @@ def process_data(filename):
 
     for stock in unique_stock_set:
         rslt_df = dataframe.loc[dataframe['stock'] == stock]
-        last_price = rslt_df['price'].max()
-        print("{stock} last price {price}".format(stock=stock, price=last_price))
-        calculate_loss(rslt_df)
-        rslt_df_pe = rslt_df.loc[rslt_df['type'] == 'PE']
-        #plot_values(rslt_df_pe)
+        return_data = calculate_loss(rslt_df)
+        loss_df = pd.DataFrame(return_data, columns=['mri', 'price', 'loss', 'strike'])
+
+        mp.title(stock)
+        # Create an axes object
+        axes = mp.gca()
+
+        # pass the axes object to plot function
+        loss_df.plot(kind='line', y='price', ax=axes);
+        loss_df.plot(kind='line', y='strike', ax=axes);
+
+        mp.show()
+        # rslt_df_pe = rslt_df.loc[rslt_df['type'] == 'PE']
+        # plot_values(rslt_df_pe)
 
 
 def calculate_loss(rslt_df):
+    return_data = []
     unique_runid_set = set(rslt_df['runid'])
     for runid in sorted(unique_runid_set):
         rslt_df_max = rslt_df.loc[rslt_df['runid'] == runid]
-        rslt_df_max = rslt_df_max[["strike", "openint", "type"]]
+        rslt_df_max = rslt_df_max[["price", "strike", "openint", "type"]]
 
         rslt_df_pe = rslt_df_max.loc[rslt_df_max['type'] == 'PE']
+        rslt_df_pe = rslt_df_pe.rename(columns={'openint': 'openint_pe', 'price': 'price_pe'})
+
         rslt_df_ce = rslt_df_max.loc[rslt_df_max['type'] == 'CE']
+        rslt_df_ce = rslt_df_ce.rename(columns={'openint': 'openint_ce', 'price': 'price_ce'})
 
         rslt_df_loss = rslt_df_ce.merge(rslt_df_pe, left_on='strike', right_on='strike')
-        rslt_df_loss = rslt_df_loss[(rslt_df_loss['openint_x'] > 0) & (rslt_df_loss['openint_y'] > 0)]
+        rslt_df_loss = rslt_df_loss[(rslt_df_loss['openint_pe'] > 0) & (rslt_df_loss['openint_ce'] > 0)]
 
         unique_strike_set = set(rslt_df_loss['strike'])
         rslt_df_loss['loss_ce'] = 0
@@ -41,15 +53,18 @@ def calculate_loss(rslt_df):
         for strike in unique_strike_set:
             for idx, row in rslt_df_loss.iterrows():
                 if row['strike'] > strike:
-                    rslt_df_loss.at[idx, 'loss_ce'] = row['loss_ce'] + (row['strike'] - strike) * row['openint_x']
+                    rslt_df_loss.at[idx, 'loss_ce'] = row['loss_ce'] + (row['strike'] - strike) * row['openint_ce']
                 if row['strike'] < strike:
-                    rslt_df_loss.at[idx, 'loss_pe'] = row['loss_pe'] + (strike - row['strike']) * row['openint_y']
+                    rslt_df_loss.at[idx, 'loss_pe'] = row['loss_pe'] + (strike - row['strike']) * row['openint_pe']
 
         rslt_df_loss['loss'] = abs(rslt_df_loss['loss_ce'] - rslt_df_loss['loss_pe'])
 
         min_loss_price = rslt_df_loss['loss'].min()
         min_loss_strike = rslt_df_loss[(rslt_df_loss['loss'] == min_loss_price)]['strike'].values[0]
-        print("at {mri}  min loss {mlp} strike price {mls}".format(mri=runid, mlp=min_loss_price, mls=min_loss_strike))
+        price = rslt_df_loss[(rslt_df_loss['loss'] == min_loss_price)]['price_pe'].values[0]
+        return_data.append([runid, price, min_loss_price, min_loss_strike])
+
+    return return_data
 
 
 def plot_values(rslt_df):
