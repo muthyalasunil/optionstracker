@@ -16,18 +16,18 @@ def process_data(filename):
         rslt_df = dataframe.loc[dataframe['stock'] == stock]
         return_data = calculate_loss(rslt_df)
 
-        # runid, price, min_loss_price, min_loss_strike
+        # runid, price, min_loss_price, min_nloss_strike, min_loss_strike, max_oi_ce, max_oi_pe
         file_out = filename.replace('options', 'loss')
         with open(file_out, 'a') as outfile:
             for data in return_data:
                 outfile.write(stock + ',' + str(data[0]) + ',' + str(data[1]) + ',' + str(data[2]) + ',' + str(
-                    data[3]) + ',' + str(data[4]))
+                    data[3]) + ',' + str(data[4]) + ',' + str(data[5]) + ',' + str(data[6]))
                 outfile.write('\n')
 
 
 def plot_trends(filename):
     rslt_df = pd.read_csv(filename)
-    rslt_df.columns = ["stock", "run", "price", "loss", "nstrike","strike"]
+    rslt_df.columns = ["stock", "run", "price", "loss", "nstrike", "strike", "max_oi_ce", "max_oi_pe"]
     unique_stock_set = set(rslt_df['stock'])
 
     for stock in unique_stock_set:
@@ -40,6 +40,8 @@ def plot_trends(filename):
         loss_df.plot(kind='line', y='price', ax=axes);
         loss_df.plot(kind='line', y='nstrike', ax=axes);
         loss_df.plot(kind='line', y='strike', ax=axes);
+        loss_df.plot(kind='line', y='max_oi_ce', ax=axes);
+        loss_df.plot(kind='line', y='max_oi_pe', ax=axes);
         mp.show()
 
 
@@ -76,13 +78,18 @@ def calculate_loss(rslt_df):
         rslt_df_loss = rslt_df_loss[(rslt_df_loss['loss_ce'] > 0) & (rslt_df_loss['loss_pe'] > 0)]
         rslt_df_loss['loss'] = abs(rslt_df_loss['loss_ce'] + rslt_df_loss['loss_pe'])
         rslt_df_loss['netloss'] = abs(rslt_df_loss['loss_ce'] - rslt_df_loss['loss_pe'])
+        max_oi_ce = rslt_df_loss['openint_ce'].max()
+        max_oi_pe = rslt_df_loss['openint_pe'].max()
 
         min_loss_price = rslt_df_loss['loss'].min()
         min_nloss_price = rslt_df_loss['netloss'].min()
         min_loss_strike = rslt_df_loss[(rslt_df_loss['loss'] == min_loss_price)]['strike'].values[0]
         min_nloss_strike = rslt_df_loss[(rslt_df_loss['netloss'] == min_nloss_price)]['strike'].values[0]
+        max_oi_ce = rslt_df_loss[(rslt_df_loss['openint_ce'] == max_oi_ce)]['strike'].values[0]
+        max_oi_pe = rslt_df_loss[(rslt_df_loss['openint_pe'] == max_oi_pe)]['strike'].values[0]
 
-        return_data.append([runid, price, min_loss_price, min_nloss_strike, min_loss_strike])
+
+        return_data.append([runid, price, min_loss_price, min_nloss_strike, min_loss_strike, max_oi_ce, max_oi_pe])
 
     return return_data
 
@@ -141,5 +148,5 @@ def temp(dataframe, unique_cusip_set, unique_txns_set):
 
 
 if __name__ == '__main__':
-    plot_trends('20240926_loss_data.csv')
-    #process_data('20240926_options_data.csv')
+    #plot_trends('20240926_loss_data.csv')
+    process_data('20241128_options_data.csv')
