@@ -95,10 +95,13 @@ if __name__ == '__main__':
                 file_name = expiryDateStr + '_loss_data.csv'
                 with open(file_name, 'a') as outfile:
                     for data in loss_data:
-                        outfile.write(stock + ',' + str(data[0])+ ',' + str(data[1])+ ',' + str(data[2])+ ',' + str(data[3]))
+                        outfile.write(stock + ',' + str(data[0]) + ',' + str(data[1]) + ',' + str(data[2]) + ',' + str(
+                            data[3]) + ',' + str(data[4]))
                         outfile.write('\n')
+
+            sleep(900)
 
         except Exception as err:
             print(f"Unexpected {err=}, {type(err)=}")
+            sleep(60)
 
-        sleep(900)
