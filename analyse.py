@@ -27,7 +27,7 @@ def process_data(filename):
 
 def plot_trends(filename):
     rslt_df = pd.read_csv(filename)
-    rslt_df.columns = ["stock", "run", "price", "loss", "strike"]
+    rslt_df.columns = ["stock", "run", "price", "loss", "nstrike","strike"]
     unique_stock_set = set(rslt_df['stock'])
 
     for stock in unique_stock_set:
@@ -38,6 +38,7 @@ def plot_trends(filename):
 
         # pass the axes object to plot function
         loss_df.plot(kind='line', y='price', ax=axes);
+        loss_df.plot(kind='line', y='nstrike', ax=axes);
         loss_df.plot(kind='line', y='strike', ax=axes);
         mp.show()
 
