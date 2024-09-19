@@ -37,11 +37,11 @@ def plot_trends(filename):
         axes = mp.gca()
 
         # pass the axes object to plot function
-        loss_df.plot(kind='line', y='price', ax=axes);
-        loss_df.plot(kind='line', y='nstrike', ax=axes);
-        loss_df.plot(kind='line', y='strike', ax=axes);
-        loss_df.plot(kind='line', y='max_oi_ce', ax=axes);
-        loss_df.plot(kind='line', y='max_oi_pe', ax=axes);
+        loss_df.plot(linestyle ='solid', y='price', ax=axes);
+        loss_df.plot(linestyle='dashdot', y='nstrike', ax=axes);
+        loss_df.plot(linestyle='dashed', y='strike', ax=axes);
+        loss_df.plot(linestyle='dotted', y='max_oi_ce', ax=axes);
+        loss_df.plot(linestyle='dotted', y='max_oi_pe', ax=axes);
         mp.show()
 
 
@@ -87,7 +87,6 @@ def calculate_loss(rslt_df):
         min_nloss_strike = rslt_df_loss[(rslt_df_loss['netloss'] == min_nloss_price)]['strike'].values[0]
         max_oi_ce = rslt_df_loss[(rslt_df_loss['openint_ce'] == max_oi_ce)]['strike'].values[0]
         max_oi_pe = rslt_df_loss[(rslt_df_loss['openint_pe'] == max_oi_pe)]['strike'].values[0]
-
 
         return_data.append([runid, price, min_loss_price, min_nloss_strike, min_loss_strike, max_oi_ce, max_oi_pe])
 
@@ -148,5 +147,5 @@ def temp(dataframe, unique_cusip_set, unique_txns_set):
 
 
 if __name__ == '__main__':
-    #plot_trends('20240926_loss_data.csv')
-    process_data('20241128_options_data.csv')
+    plot_trends('20240926_loss_data.csv')
+    # process_data('20241128_options_data.csv')

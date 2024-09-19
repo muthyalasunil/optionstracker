@@ -6,6 +6,8 @@ import datetime
 from time import sleep
 import pandas as pd
 import analyse
+import utils
+
 
 baseurl = "https://www.nseindia.com/"
 url = f"https://www.nseindia.com/api/option-chain-equities?symbol=__stock__"
@@ -29,26 +31,13 @@ def capture_options(stock, session, cookies):
             for data in json_data['records']['data']:
                 if 'PE' in data and expiryDate in data['expiryDate']:
                     # Filtering by key
-                    filtered_data = "{stock},{price},{strikePrice},{openInterest},PE".format(stock=stock,
-                                                                                             strikePrice=data['PE'][
-                                                                                                 'strikePrice'],
-                                                                                             openInterest=data['PE'][
-                                                                                                 'openInterest'],
-                                                                                             price=data['PE'][
-                                                                                                 'underlyingValue'])
-                    return_list.append(filtered_data)
+                    filtered_data = utils.iterate_nested_json_for_loop(data['PE'])
+                    return_list.append(stock+','+filtered_data+',PE')
 
                 if 'CE' in data and expiryDate in data['expiryDate']:
                     # Filtering by key
-                    filtered_data = "{stock},{price},{strikePrice},{openInterest},CE".format(stock=stock,
-                                                                                             strikePrice=data['CE'][
-                                                                                                 'strikePrice'],
-                                                                                             openInterest=data['CE'][
-                                                                                                 'openInterest'],
-                                                                                             price=data['CE'][
-                                                                                                 'underlyingValue'])
-
-                    return_list.append(filtered_data)
+                    filtered_data = utils.iterate_nested_json_for_loop(data['CE'])
+                    return_list.append(stock+','+filtered_data+',CE')
 
             return_data[expiryDate] = return_list
 
@@ -58,7 +47,7 @@ def capture_options(stock, session, cookies):
 
 if __name__ == '__main__':
     print('Start......')
-    stocks = ['ITC', 'ADANIPORTS', 'ICICIBANK']
+    stocks = ['ITC', 'ADANIPORTS', 'ICICIBANK', 'TCS', 'TATAMOTORS', 'SBI', 'RELIANCE']
 
     file_path = '_options_data.json'
 
@@ -83,7 +72,10 @@ if __name__ == '__main__':
                             outfile.write('\n')
 
                     dataframe = pd.DataFrame([str.split(",") for str in return_data[expiryDate]])
-                    dataframe.columns = ["stock", "price", "strike", "openint", "type"]
+                    cols = [3,4,5,6,7,8,9,10,11,12,13,14,15]
+                    dataframe.drop(dataframe.columns[cols], axis=1, inplace=True)
+                    dataframe.columns = ["stock", "strike", "openint", "price", "type"]
+
                     dataframe['runid'] = x_label
                     # set dtypes for each column
                     dataframe['runid'] = dataframe['runid'].astype(int)
@@ -102,8 +94,10 @@ if __name__ == '__main__':
                     except Exception as err:
                         print(f"calculate_loss - Unexpected {err=}, {type(err)=}")
 
+            print('sleep(900) ......')
             sleep(900)
 
         except Exception as err:
             print(f"main - Unexpected {err=}, {type(err)=}")
+            print('sleep(60) ......')
             sleep(60)
