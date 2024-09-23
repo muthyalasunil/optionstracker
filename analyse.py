@@ -1,15 +1,19 @@
 import matplotlib.pyplot as mp
 import pandas as pd
 import seaborn as sb
+import datetime
+import glob
+from dateutil.relativedelta import relativedelta
 import numpy as np
 
 
 def process_data(filename):
     dataframe = pd.read_csv(filename)
     dataframe = dataframe.fillna(0)
-    # 121318,ITC,509.35,400,113,PE
-    dataframe.columns = ["runid", "stock", "price", "strike", "openint", "type"]
-
+    # 201512, ITC, 520, 787, -75, -8.7, 2643, 17.53, 6.7, -5.25, -43.93, 347200, 310400, 3200, 6.6, 6400, 6.75, 514.55, PE
+    cols = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+    dataframe.drop(dataframe.columns[cols], axis=1, inplace=True)
+    dataframe.columns = ["runid", "stock", "strike", "openint", "price", "type"]
     unique_stock_set = set(dataframe['stock'])
 
     for stock in unique_stock_set:
@@ -37,7 +41,7 @@ def plot_trends(filename):
         axes = mp.gca()
 
         # pass the axes object to plot function
-        loss_df.plot(linestyle ='solid', y='price', ax=axes);
+        loss_df.plot(linestyle='solid', y='price', ax=axes);
         loss_df.plot(linestyle='dashdot', y='nstrike', ax=axes);
         loss_df.plot(linestyle='dashed', y='strike', ax=axes);
         loss_df.plot(linestyle='dotted', y='max_oi_ce', ax=axes);
@@ -146,6 +150,65 @@ def temp(dataframe, unique_cusip_set, unique_txns_set):
     mp.show()
 
 
+def get_files_names():
+    file_names = []
+    xtime = datetime.datetime.now()
+    files = glob.glob("./*_loss_data.csv")
+    for i in range(3):
+        next_nmonth = xtime + relativedelta(months=i)
+        x_label = next_nmonth.strftime("%Y%m")
+        for file_name in files:
+            if x_label in file_name:
+                file_names.append(file_name)
+
+    return file_names
+
+
+def plot_all_values(file_names):
+    rslt_df1 = pd.read_csv(file_names[0])
+    rslt_df1.columns = ["stock", "run", "price", "loss", "nstrike1", "strike", "max_oi_ce", "max_oi_pe"]
+    rslt_df1 = rslt_df1[["stock", "run", "price", "nstrike1"]]
+
+    rslt_df2 = pd.read_csv(file_names[1])
+    rslt_df2.columns = ["stock", "run", "price", "loss", "nstrike2", "strike", "max_oi_ce", "max_oi_pe"]
+    rslt_df2 = rslt_df2[["stock", "run", "nstrike2"]]
+    rslt_df = pd.merge(
+        left=rslt_df1,
+        right=rslt_df2,
+        how='left',
+        left_on=['stock', 'run'],
+        right_on=['stock', 'run'],
+    )
+
+    rslt_df3 = pd.read_csv(file_names[2])
+    rslt_df3.columns = ["stock", "run", "price", "loss", "nstrike3", "strike", "max_oi_ce", "max_oi_pe"]
+    rslt_df3 = rslt_df3[["stock", "run", "nstrike3"]]
+    rslt_df = pd.merge(
+        left=rslt_df,
+        right=rslt_df3,
+        how='left',
+        left_on=['stock', 'run'],
+        right_on=['stock', 'run'],
+    )
+
+    unique_stock_set = set(rslt_df['stock'])
+    for stock in unique_stock_set:
+        loss_df = rslt_df.loc[rslt_df['stock'] == stock]
+        mp.title(stock)
+        # Create an axes object
+        axes = mp.gca()
+
+        # pass the axes object to plot function
+        loss_df.plot(linestyle='solid', y='price', ax=axes);
+        loss_df.plot(linestyle='dashdot', y='nstrike1', ax=axes);
+        loss_df.plot(linestyle='dashed', y='nstrike2', ax=axes);
+        loss_df.plot(linestyle='dotted', y='nstrike3', ax=axes);
+        mp.show()
+
+
 if __name__ == '__main__':
-    plot_trends('20240926_loss_data.csv')
-    # process_data('20241128_options_data.csv')
+    # plot_trends('20240926_loss_data.csv')
+    # process_data('20240926_options_data.csv')
+    files_names = get_files_names()
+    print(files_names)
+    plot_all_values(files_names)

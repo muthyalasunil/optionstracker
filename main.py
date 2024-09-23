@@ -8,7 +8,6 @@ import pandas as pd
 import analyse
 import utils
 
-
 baseurl = "https://www.nseindia.com/"
 url = f"https://www.nseindia.com/api/option-chain-equities?symbol=__stock__"
 headers = {'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, '
@@ -32,12 +31,12 @@ def capture_options(stock, session, cookies):
                 if 'PE' in data and expiryDate in data['expiryDate']:
                     # Filtering by key
                     filtered_data = utils.iterate_nested_json_for_loop(data['PE'])
-                    return_list.append(stock+','+filtered_data+',PE')
+                    return_list.append(stock + ',' + filtered_data + ',PE')
 
                 if 'CE' in data and expiryDate in data['expiryDate']:
                     # Filtering by key
                     filtered_data = utils.iterate_nested_json_for_loop(data['CE'])
-                    return_list.append(stock+','+filtered_data+',CE')
+                    return_list.append(stock + ',' + filtered_data + ',CE')
 
             return_data[expiryDate] = return_list
 
@@ -72,7 +71,7 @@ if __name__ == '__main__':
                             outfile.write('\n')
 
                     dataframe = pd.DataFrame([str.split(",") for str in return_data[expiryDate]])
-                    cols = [3,4,5,6,7,8,9,10,11,12,13,14,15]
+                    cols = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
                     dataframe.drop(dataframe.columns[cols], axis=1, inplace=True)
                     dataframe.columns = ["stock", "strike", "openint", "price", "type"]
 
@@ -87,10 +86,8 @@ if __name__ == '__main__':
                         file_name = expiryDateStr + '_loss_data.csv'
                         with open(file_name, 'a') as outfile:
                             for data in loss_data:
-                                outfile.write(
-                                    stock + ',' + str(data[0]) + ',' + str(data[1]) + ',' + str(data[2]) + ',' + str(
-                                        data[3]) + ',' + str(data[4]) + ',' + str(data[5]) + ',' + str(data[6]))
-                                outfile.write('\n')
+                                line = ','.join(str(x) for x in data)
+                                outfile.write(stock + ',' + line + '\n')
                     except Exception as err:
                         print(f"calculate_loss - Unexpected {err=}, {type(err)=}")
 
