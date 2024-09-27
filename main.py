@@ -82,7 +82,7 @@ if __name__ == '__main__':
                     dataframe['openint'] = dataframe['openint'].astype(float)
                     dataframe['price'] = dataframe['price'].astype(float)
                     try:
-                        loss_data = analyse.calculate_loss(dataframe)
+                        loss_data = analyse.calculate_loss(stock, dataframe)
                         file_name = expiryDateStr + '_loss_data.csv'
                         with open(file_name, 'a') as outfile:
                             for data in loss_data:

@@ -8,30 +8,35 @@ import numpy as np
 
 
 def process_data(filename):
-    dataframe = pd.read_csv(filename)
-    dataframe = dataframe.fillna(0)
+    # dataframe = pd.read_csv(filename)
     # 201512, ITC, 520, 787, -75, -8.7, 2643, 17.53, 6.7, -5.25, -43.93, 347200, 310400, 3200, 6.6, 6400, 6.75, 514.55, PE
-    cols = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
-    dataframe.drop(dataframe.columns[cols], axis=1, inplace=True)
-    dataframe.columns = ["runid", "stock", "strike", "openint", "price", "type"]
+    dataframe = pd.read_csv(filename, names=["runid", "stock", "strike", "openint", "coi", "pcio", "vol", "iv",
+                                             "lp", "chg", "pchg", "tbuy", "tsell", "bqty", "bprc", "aqty", "aprc",
+                                             "price", "type"])
+    dataframe = dataframe.fillna(0)
+    dataframe = dataframe[(dataframe['price'] > 0)]
+    # cols = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+    cols = ["coi", "pcio", "vol", "iv", "lp", "chg", "pchg", "tbuy", "tsell", "bqty", "bprc", "aqty", "aprc"]
+    # dataframe.drop(dataframe.columns[cols], axis=1, inplace=True)
+    dataframe = dataframe[["runid", "stock", "strike", "openint", "price", "vol", "iv", "type"]]
+    # dataframe.columns = ["runid", "stock", "strike", "openint", "price", "type"]
     unique_stock_set = set(dataframe['stock'])
 
     for stock in unique_stock_set:
         rslt_df = dataframe.loc[dataframe['stock'] == stock]
-        return_data = calculate_loss(rslt_df)
-
-        # runid, price, min_loss_price, min_nloss_strike, min_loss_strike, max_oi_ce, max_oi_pe
+        return_data = calculate_loss(stock, rslt_df)
         file_out = filename.replace('options', 'loss')
         with open(file_out, 'a') as outfile:
             for data in return_data:
-                outfile.write(stock + ',' + str(data[0]) + ',' + str(data[1]) + ',' + str(data[2]) + ',' + str(
-                    data[3]) + ',' + str(data[4]) + ',' + str(data[5]) + ',' + str(data[6]))
-                outfile.write('\n')
+                line = ','.join(str(x) for x in data)
+                outfile.write(stock + ',' + line + '\n')
 
 
 def plot_trends(filename):
     rslt_df = pd.read_csv(filename)
-    rslt_df.columns = ["stock", "run", "price", "loss", "nstrike", "strike", "max_oi_ce", "max_oi_pe"]
+    rslt_df.columns = ['stock', 'runid', 'price', 'min_tloss', 'nstrike', 'strike', 'vol_ce', 'vol_pe',
+                       'iv_ce', 'iv_pe', 'max_oi_ce',
+                       'max_oi_pe']
     unique_stock_set = set(rslt_df['stock'])
 
     for stock in unique_stock_set:
@@ -41,58 +46,82 @@ def plot_trends(filename):
         axes = mp.gca()
 
         # pass the axes object to plot function
-        loss_df.plot(linestyle='solid', y='price', ax=axes);
-        loss_df.plot(linestyle='dashdot', y='nstrike', ax=axes);
-        loss_df.plot(linestyle='dashed', y='strike', ax=axes);
-        loss_df.plot(linestyle='dotted', y='max_oi_ce', ax=axes);
-        loss_df.plot(linestyle='dotted', y='max_oi_pe', ax=axes);
+        #loss_df.plot(linestyle='solid', y='price', ax=axes);
+        #loss_df.plot(linestyle='dashdot', y='nstrike', ax=axes);
+        #loss_df.plot(linestyle='dashed', y='strike', ax=axes);
+        loss_df.plot(linestyle='dotted', y='vol_ce', ax=axes);
+        loss_df.plot(linestyle='dotted', y='vol_pe', ax=axes);
         mp.show()
 
 
-def calculate_loss(rslt_df):
+def calculate_loss(stock, rslt_df):
     return_data = []
-    unique_runid_set = set(rslt_df['runid'])
-    for runid in sorted(unique_runid_set):
-        rslt_df_max = rslt_df.loc[rslt_df['runid'] == runid]
-        rslt_df_max = rslt_df_max[["price", "strike", "openint", "type"]]
+    unique_runid_set = sorted(set(rslt_df['runid']))
+    for runid in unique_runid_set:
+        try:
+            rslt_df_max = rslt_df.loc[rslt_df['runid'] == runid]
+            rslt_df_max = rslt_df_max[["price", "strike", "openint", "vol", "iv", "type"]]
 
-        rslt_df_pe = rslt_df_max.loc[rslt_df_max['type'] == 'PE']
-        rslt_df_pe = rslt_df_pe.rename(columns={'openint': 'openint_pe', 'price': 'price_pe'})
+            rslt_df_pe = rslt_df_max.loc[rslt_df_max['type'] == 'PE']
+            rslt_df_pe = rslt_df_pe.rename(
+                columns={'openint': 'openint_pe', 'price': 'price_pe', 'vol': 'vol_pe', 'iv': 'iv_pe'})
 
-        rslt_df_ce = rslt_df_max.loc[rslt_df_max['type'] == 'CE']
-        rslt_df_ce = rslt_df_ce.rename(columns={'openint': 'openint_ce', 'price': 'price_ce'})
+            rslt_df_ce = rslt_df_max.loc[rslt_df_max['type'] == 'CE']
+            rslt_df_ce = rslt_df_ce.rename(
+                columns={'openint': 'openint_ce', 'price': 'price_ce', 'vol': 'vol_ce', 'iv': 'iv_ce'})
 
-        rslt_df_loss = rslt_df_ce.merge(rslt_df_pe, left_on='strike', right_on='strike')
-        rslt_df_loss = rslt_df_loss[(rslt_df_loss['openint_pe'] > 0) & (rslt_df_loss['openint_ce'] > 0)]
+            rslt_df_loss = rslt_df_ce.merge(rslt_df_pe, how='outer', left_on='strike', right_on='strike')
+            rslt_df_loss = rslt_df_loss.fillna(0)
+            #rslt_df_loss = rslt_df_loss[(rslt_df_loss['openint_pe'] > 0) | (rslt_df_loss['openint_ce'] > 0)]
 
-        unique_strike_set = set(rslt_df_loss['strike'])
-        rslt_df_loss['loss_ce'] = 0
-        rslt_df_loss['loss_pe'] = 0
-        price = rslt_df_loss['price_pe'].max()
+            unique_strike_set = set(rslt_df_loss['strike'])
+            rslt_df_loss['loss_ce'] = 0
+            rslt_df_loss['loss_pe'] = 0
+            price = rslt_df_loss['price_pe'].max()
 
-        for strike in unique_strike_set:
-            perc_chg = abs((price - strike) / price)
-            if perc_chg < 0.1:
-                for idx, row in rslt_df_loss.iterrows():
-                    if row['strike'] > strike:
-                        rslt_df_loss.at[idx, 'loss_ce'] = row['loss_ce'] + (row['strike'] - strike) * row['openint_ce']
-                    if row['strike'] < strike:
-                        rslt_df_loss.at[idx, 'loss_pe'] = row['loss_pe'] + (strike - row['strike']) * row['openint_pe']
+            for strike in unique_strike_set:
+                perc_chg = abs((price - strike) / price)
+                if perc_chg < 0.1:
+                    for idx, row in rslt_df_loss.iterrows():
+                        if row['strike'] > strike:
+                            rslt_df_loss.at[idx, 'loss_ce'] = row['loss_ce'] + (row['strike'] - strike) * row[
+                                'openint_ce']
+                        if row['strike'] < strike:
+                            rslt_df_loss.at[idx, 'loss_pe'] = row['loss_pe'] + (strike - row['strike']) * row[
+                                'openint_pe']
 
-        rslt_df_loss = rslt_df_loss[(rslt_df_loss['loss_ce'] > 0) & (rslt_df_loss['loss_pe'] > 0)]
-        rslt_df_loss['loss'] = abs(rslt_df_loss['loss_ce'] + rslt_df_loss['loss_pe'])
-        rslt_df_loss['netloss'] = abs(rslt_df_loss['loss_ce'] - rslt_df_loss['loss_pe'])
-        max_oi_ce = rslt_df_loss['openint_ce'].max()
-        max_oi_pe = rslt_df_loss['openint_pe'].max()
 
-        min_loss_price = rslt_df_loss['loss'].min()
-        min_nloss_price = rslt_df_loss['netloss'].min()
-        min_loss_strike = rslt_df_loss[(rslt_df_loss['loss'] == min_loss_price)]['strike'].values[0]
-        min_nloss_strike = rslt_df_loss[(rslt_df_loss['netloss'] == min_nloss_price)]['strike'].values[0]
-        max_oi_ce = rslt_df_loss[(rslt_df_loss['openint_ce'] == max_oi_ce)]['strike'].values[0]
-        max_oi_pe = rslt_df_loss[(rslt_df_loss['openint_pe'] == max_oi_pe)]['strike'].values[0]
+            #rslt_df_loss = rslt_df_loss[(rslt_df_loss['loss_ce'] > 0) | (rslt_df_loss['loss_pe'] > 0)]
+            rslt_df_loss['loss'] = abs(rslt_df_loss['loss_ce'] + rslt_df_loss['loss_pe'])
+            rslt_df_loss['netloss'] = abs(rslt_df_loss['loss_ce'] - rslt_df_loss['loss_pe'])
+            max_oi_ce = rslt_df_loss['openint_ce'].max()
+            max_oi_pe = rslt_df_loss['openint_pe'].max()
 
-        return_data.append([runid, price, min_loss_price, min_nloss_strike, min_loss_strike, max_oi_ce, max_oi_pe])
+
+            min_tloss = rslt_df_loss['loss'].min()
+            min_nloss = rslt_df_loss['netloss'].min()
+            min_loss_strike = rslt_df_loss[(rslt_df_loss['loss'] == min_tloss)]['strike'].values[0]
+            min_nloss_strike = rslt_df_loss[(rslt_df_loss['netloss'] == min_nloss)]['strike'].values[0]
+            max_oi_ce = rslt_df_loss[(rslt_df_loss['openint_ce'] == max_oi_ce)]['strike'].values[0]
+            max_oi_pe = rslt_df_loss[(rslt_df_loss['openint_pe'] == max_oi_pe)]['strike'].values[0]
+            vol_pe = rslt_df_loss[(rslt_df_loss['netloss'] == min_nloss)]['vol_pe'].values[0]
+            vol_ce = rslt_df_loss[(rslt_df_loss['netloss'] == min_nloss)]['vol_ce'].values[0]
+            iv_pe = rslt_df_loss[(rslt_df_loss['netloss'] == min_nloss)]['iv_pe'].values[0]
+            iv_ce = rslt_df_loss[(rslt_df_loss['netloss'] == min_nloss)]['iv_ce'].values[0]
+
+            return_data.append(
+                [runid, price, min_tloss, min_nloss_strike, min_loss_strike, vol_ce, vol_pe, iv_ce, iv_pe, max_oi_ce,
+                 max_oi_pe])
+            #print(return_data[-1])
+
+        except Exception as err:
+            print(f"calc_loss - Unexpected {err=}, {type(err)=}")
+            print("error calculating loss {stock} - {runid}......".format(stock=stock, runid=runid))
+            with pd.option_context('display.max_rows', None, 'display.max_columns',
+                                   None):  # more options can be specified also
+                print(rslt_df_loss)
+        finally:
+            pass
 
     return return_data
 
@@ -207,8 +236,8 @@ def plot_all_values(file_names):
 
 
 if __name__ == '__main__':
-    # plot_trends('20240926_loss_data.csv')
-    # process_data('20240926_options_data.csv')
-    files_names = get_files_names()
-    print(files_names)
-    plot_all_values(files_names)
+    #process_data('20241128_options_data.csv')
+    plot_trends('20241031_loss_data.csv')
+    # files_names = get_files_names()
+    # print(files_names)
+    # plot_all_values(files_names)
