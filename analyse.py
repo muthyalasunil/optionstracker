@@ -32,28 +32,6 @@ def process_data(filename):
                 outfile.write(stock + ',' + line + '\n')
 
 
-def plot_trends(filename):
-    rslt_df = pd.read_csv(filename)
-    rslt_df.columns = ['stock', 'runid', 'price', 'min_tloss', 'nstrike', 'strike', 'vol_ce', 'vol_pe',
-                       'iv_ce', 'iv_pe', 'max_oi_ce',
-                       'max_oi_pe']
-    unique_stock_set = set(rslt_df['stock'])
-
-    for stock in unique_stock_set:
-        loss_df = rslt_df.loc[rslt_df['stock'] == stock]
-        mp.title(stock)
-        # Create an axes object
-        axes = mp.gca()
-
-        # pass the axes object to plot function
-        #loss_df.plot(linestyle='solid', y='price', ax=axes);
-        #loss_df.plot(linestyle='dashdot', y='nstrike', ax=axes);
-        #loss_df.plot(linestyle='dashed', y='strike', ax=axes);
-        loss_df.plot(linestyle='dotted', y='vol_ce', ax=axes);
-        loss_df.plot(linestyle='dotted', y='vol_pe', ax=axes);
-        mp.show()
-
-
 def calculate_loss(stock, rslt_df):
     return_data = []
     unique_runid_set = sorted(set(rslt_df['runid']))
@@ -72,47 +50,51 @@ def calculate_loss(stock, rslt_df):
 
             rslt_df_loss = rslt_df_ce.merge(rslt_df_pe, how='outer', left_on='strike', right_on='strike')
             rslt_df_loss = rslt_df_loss.fillna(0)
-            #rslt_df_loss = rslt_df_loss[(rslt_df_loss['openint_pe'] > 0) | (rslt_df_loss['openint_ce'] > 0)]
 
-            unique_strike_set = set(rslt_df_loss['strike'])
             rslt_df_loss['loss_ce'] = 0
             rslt_df_loss['loss_pe'] = 0
             price = rslt_df_loss['price_pe'].max()
+            l_strike = price * 0.9
+            h_strike = price * 1.1
+            rslt_df_loss = rslt_df_loss[(rslt_df_loss['strike'] > l_strike) & (rslt_df_loss['strike'] < h_strike)]
+            rslt_df_loss = rslt_df_loss[(rslt_df_loss['openint_ce'] > 0) & (rslt_df_loss['openint_pe'] > 0)]
 
+            unique_strike_set = set(rslt_df_loss['strike'])
             for strike in unique_strike_set:
-                perc_chg = abs((price - strike) / price)
-                if perc_chg < 0.1:
-                    for idx, row in rslt_df_loss.iterrows():
-                        if row['strike'] > strike:
-                            rslt_df_loss.at[idx, 'loss_ce'] = row['loss_ce'] + (row['strike'] - strike) * row[
-                                'openint_ce']
-                        if row['strike'] < strike:
-                            rslt_df_loss.at[idx, 'loss_pe'] = row['loss_pe'] + (strike - row['strike']) * row[
-                                'openint_pe']
+                for idx, row in rslt_df_loss.iterrows():
+                    if row['strike'] > strike:
+                        rslt_df_loss.at[idx, 'loss_ce'] = row['loss_ce'] + (row['strike'] - strike) * row[
+                            'openint_ce']
+                    if row['strike'] < strike:
+                        rslt_df_loss.at[idx, 'loss_pe'] = row['loss_pe'] + (strike - row['strike']) * row[
+                            'openint_pe']
 
-
-            #rslt_df_loss = rslt_df_loss[(rslt_df_loss['loss_ce'] > 0) | (rslt_df_loss['loss_pe'] > 0)]
+            # rslt_df_loss = rslt_df_loss[(rslt_df_loss['loss_ce'] > 0) | (rslt_df_loss['loss_pe'] > 0)]
             rslt_df_loss['loss'] = abs(rslt_df_loss['loss_ce'] + rslt_df_loss['loss_pe'])
             rslt_df_loss['netloss'] = abs(rslt_df_loss['loss_ce'] - rslt_df_loss['loss_pe'])
+
             max_oi_ce = rslt_df_loss['openint_ce'].max()
             max_oi_pe = rslt_df_loss['openint_pe'].max()
-
-
             min_tloss = rslt_df_loss['loss'].min()
             min_nloss = rslt_df_loss['netloss'].min()
-            min_loss_strike = rslt_df_loss[(rslt_df_loss['loss'] == min_tloss)]['strike'].values[0]
-            min_nloss_strike = rslt_df_loss[(rslt_df_loss['netloss'] == min_nloss)]['strike'].values[0]
-            max_oi_ce = rslt_df_loss[(rslt_df_loss['openint_ce'] == max_oi_ce)]['strike'].values[0]
-            max_oi_pe = rslt_df_loss[(rslt_df_loss['openint_pe'] == max_oi_pe)]['strike'].values[0]
-            vol_pe = rslt_df_loss[(rslt_df_loss['netloss'] == min_nloss)]['vol_pe'].values[0]
-            vol_ce = rslt_df_loss[(rslt_df_loss['netloss'] == min_nloss)]['vol_ce'].values[0]
-            iv_pe = rslt_df_loss[(rslt_df_loss['netloss'] == min_nloss)]['iv_pe'].values[0]
-            iv_ce = rslt_df_loss[(rslt_df_loss['netloss'] == min_nloss)]['iv_ce'].values[0]
+            max_v_ce = rslt_df_loss['vol_ce'].max()
+            max_v_pe = rslt_df_loss['vol_pe'].max()
+            max_iv_ce = rslt_df_loss['iv_ce'].max()
+            max_iv_pe = rslt_df_loss['iv_pe'].max()
+
+            tstrike = rslt_df_loss[(rslt_df_loss['loss'] == min_tloss)]['strike'].values[0]
+            nstrike = rslt_df_loss[(rslt_df_loss['netloss'] == min_nloss)]['strike'].values[0]
+            oi_ce = rslt_df_loss[(rslt_df_loss['openint_ce'] == max_oi_ce)]['strike'].values[0]
+            oi_pe = rslt_df_loss[(rslt_df_loss['openint_pe'] == max_oi_pe)]['strike'].values[0]
+
+            vol_ce = rslt_df_loss[(rslt_df_loss['vol_ce'] == max_v_ce)]['strike'].values[0]
+            vol_pe = rslt_df_loss[(rslt_df_loss['vol_pe'] == max_v_pe)]['strike'].values[0]
+            iv_ce = rslt_df_loss[(rslt_df_loss['iv_ce'] == max_iv_ce)]['strike'].values[0]
+            iv_pe = rslt_df_loss[(rslt_df_loss['iv_pe'] == max_iv_pe)]['strike'].values[0]
 
             return_data.append(
-                [runid, price, min_tloss, min_nloss_strike, min_loss_strike, vol_ce, vol_pe, iv_ce, iv_pe, max_oi_ce,
-                 max_oi_pe])
-            #print(return_data[-1])
+                [runid, price, tstrike, nstrike, vol_ce, vol_pe, iv_ce, iv_pe, oi_ce, oi_pe])
+            # print(return_data[-1])
 
         except Exception as err:
             print(f"calc_loss - Unexpected {err=}, {type(err)=}")
@@ -182,7 +164,7 @@ def temp(dataframe, unique_cusip_set, unique_txns_set):
 def get_files_names():
     file_names = []
     xtime = datetime.datetime.now()
-    files = glob.glob("./*_loss_data.csv")
+    files = glob.glob("./*_options_data.csv")
     for i in range(3):
         next_nmonth = xtime + relativedelta(months=i)
         x_label = next_nmonth.strftime("%Y%m")
@@ -235,8 +217,42 @@ def plot_all_values(file_names):
         mp.show()
 
 
+def plot_trends(filename):
+    rslt_df = pd.read_csv(filename)
+    rslt_df.columns = ['stock', 'runid', 'price', 'tstrike', 'nstrike', 'vol_ce', 'vol_pe',
+                       'iv_ce', 'iv_pe', 'oi_ce',
+                       'oi_pe']
+    unique_stock_set = set(rslt_df['stock'])
+
+    for stock in unique_stock_set:
+        loss_df = rslt_df.loc[rslt_df['stock'] == stock]
+        fig, axs = mp.subplots(3)  # for n subplots
+        axs[0].title.set_text(stock)
+        # pass the axes object to plot function
+        loss_df.plot(linestyle='solid', y='price', ax=axs[0]);
+        loss_df.plot(linestyle='dashdot', y='nstrike', ax=axs[0]);
+        loss_df.plot(linestyle='dashdot', y='tstrike', ax=axs[0]);
+        loss_df.plot(linestyle='dotted', y='oi_ce', ax=axs[0]);
+        loss_df.plot(linestyle='dotted', y='oi_pe', ax=axs[0]);
+
+        loss_df.plot(linestyle='solid', y='price', ax=axs[1]);
+        loss_df.plot(linestyle='dotted', y='vol_ce', ax=axs[1]);
+        loss_df.plot(linestyle='dotted', y='vol_pe', ax=axs[1]);
+
+        loss_df.plot(linestyle='solid', y='price', ax=axs[2]);
+        loss_df.plot(linestyle='dotted', y='iv_ce', ax=axs[2]);
+        loss_df.plot(linestyle='dotted', y='iv_pe', ax=axs[2]);
+
+        mp.show()
+
+
 if __name__ == '__main__':
-    #process_data('20241128_options_data.csv')
+    '''
+    files_names = get_files_names()
+    for file_name in files_names:
+        process_data(file_name)
+        print(file_name)
+    '''
     plot_trends('20241031_loss_data.csv')
     # files_names = get_files_names()
     # print(files_names)
