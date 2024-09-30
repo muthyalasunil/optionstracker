@@ -65,16 +65,17 @@ if __name__ == '__main__':
                 for expiryDate in return_data:
                     expiryDateStr = datetime.datetime.strptime(expiryDate, '%d-%b-%Y').strftime('%Y%m%d')
                     file_name = expiryDateStr + '_options_data.csv'
+
                     with open(file_name, 'a') as outfile:
                         for line in return_data[expiryDate]:
                             outfile.write(x_label + ',' + line)
                             outfile.write('\n')
 
                     dataframe = pd.DataFrame([str.split(",") for str in return_data[expiryDate]])
-                    cols = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
-                    dataframe.drop(dataframe.columns[cols], axis=1, inplace=True)
-                    dataframe.columns = ["stock", "strike", "openint", "price", "type"]
-
+                    dataframe.columns=["stock", "strike", "openint", "coi", "pcio", "vol", "iv",
+                                             "lp", "chg", "pchg", "tbuy", "tsell", "bqty", "bprc", "aqty", "aprc",
+                                             "price", "type"]
+                    dataframe = dataframe[["stock", "strike", "openint", "price", "vol", "iv", "type"]]
                     dataframe['runid'] = x_label
                     # set dtypes for each column
                     dataframe['runid'] = dataframe['runid'].astype(int)
@@ -84,10 +85,12 @@ if __name__ == '__main__':
                     try:
                         loss_data = analyse.calculate_loss(stock, dataframe)
                         file_name = expiryDateStr + '_loss_data.csv'
+
                         with open(file_name, 'a') as outfile:
                             for data in loss_data:
                                 line = ','.join(str(x) for x in data)
                                 outfile.write(stock + ',' + line + '\n')
+
                     except Exception as err:
                         print(f"calculate_loss - Unexpected {err=}, {type(err)=}")
 
