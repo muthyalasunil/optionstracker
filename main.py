@@ -46,13 +46,13 @@ def capture_options(stock, session, cookies):
 
 if __name__ == '__main__':
     print('Start......')
-    stocks = ['ITC', 'ADANIPORTS', 'ICICIBANK', 'TCS', 'TATAMOTORS', 'SBI', 'RELIANCE']
+    stocks = ['ITC', 'ADANIPORTS', 'ICICIBANK', 'TCS', 'TATAMOTORS', 'SBIN', 'RELIANCE']
 
     file_path = '_options_data.json'
 
     for x in range(25):
         xtime = datetime.datetime.now()
-        x_label = xtime.strftime("%d%H%M")
+        x_label = xtime.strftime("%m%d%H%M")
         print(x_label)
         try:
             session = requests.Session()

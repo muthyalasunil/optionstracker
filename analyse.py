@@ -253,7 +253,8 @@ if __name__ == '__main__':
         process_data(file_name)
         print(file_name)
     '''
-    plot_trends('20241031_loss_data.csv')
+    process_data('20241226_options_data.csv')
+    plot_trends('20241226_loss_data.csv')
     # files_names = get_files_names()
     # print(files_names)
     # plot_all_values(files_names)
