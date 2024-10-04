@@ -6,13 +6,15 @@ import glob
 from dateutil.relativedelta import relativedelta
 import numpy as np
 
+option_columns = ["runid", "stock", "strike", "openint", "coi", "pcio", "vol", "iv",
+                  "lp", "chg", "pchg", "tbuy", "tsell", "bqty", "bprc", "aqty", "aprc",
+                  "price", "type"]
+
 
 def process_data(filename):
     # dataframe = pd.read_csv(filename)
     # 201512, ITC, 520, 787, -75, -8.7, 2643, 17.53, 6.7, -5.25, -43.93, 347200, 310400, 3200, 6.6, 6400, 6.75, 514.55, PE
-    dataframe = pd.read_csv(filename, names=["runid", "stock", "strike", "openint", "coi", "pcio", "vol", "iv",
-                                             "lp", "chg", "pchg", "tbuy", "tsell", "bqty", "bprc", "aqty", "aprc",
-                                             "price", "type"])
+    dataframe = pd.read_csv(filename, names=option_columns)
     dataframe = dataframe.fillna(0)
     dataframe = dataframe[(dataframe['price'] > 0)]
     # cols = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
@@ -246,6 +248,49 @@ def plot_trends(filename):
         mp.show()
 
 
+def plot_iv(filename):
+    rslt_df = pd.read_csv(filename)
+    rslt_df.columns = ['stock', 'runid', 'price', 'tstrike', 'nstrike', 'vol_ce', 'vol_pe',
+                       'iv_ce', 'iv_pe', 'oi_ce',
+                       'oi_pe']
+    unique_stock_set = set(rslt_df['stock'])
+
+    for stock in unique_stock_set:
+        loss_df = rslt_df.loc[rslt_df['stock'] == stock]
+        nstrike = loss_df['nstrike'].values[-1]
+
+        stock_df = pd.read_csv(filename.replace('loss', 'options'), names=option_columns)
+        stock_df = stock_df.loc[stock_df['stock'] == stock]
+        stock_df = stock_df.loc[stock_df['strike'] == nstrike]
+
+        fig, axs = mp.subplots(3)  # for n subplots
+        axs[0].title.set_text(stock + '_' + str(nstrike))
+
+        pe_df = stock_df.loc[stock_df['type'] == 'PE']
+        pe_df = pe_df.rename(columns={"openint": 'oi_pe', 'vol': 'vol_pe'})
+        try:
+            nstrike_vals = loss_df['nstrike'].values
+            pe_df['nstrike'] = np.array(nstrike_vals)
+            pe_df.plot(linestyle='dashdot', y='nstrike', ax=axs[2]);
+
+        except Exception as err:
+            print("shape {stock} - {loss}, {options}..".format(stock=stock, loss=loss_df.shape[0],
+                                                               options=pe_df.shape[0]))
+
+        ce_df = stock_df.loc[stock_df['type'] == 'CE']
+        ce_df = ce_df.rename(columns={"openint": 'oi_ce', 'vol': 'vol_ce'})
+
+        ce_df.plot(linestyle='dashdot', y='oi_ce', ax=axs[0]);
+        ce_df.plot(linestyle='dashdot', y='vol_ce', ax=axs[1]);
+
+        pe_df.plot(linestyle='dashdot', y='oi_pe', ax=axs[0]);
+        pe_df.plot(linestyle='dashdot', y='vol_pe', ax=axs[1]);
+
+        pe_df.plot(linestyle='solid', y='price', ax=axs[2]);
+
+        mp.show()
+
+
 if __name__ == '__main__':
     '''
     files_names = get_files_names()
@@ -253,8 +298,8 @@ if __name__ == '__main__':
         process_data(file_name)
         print(file_name)
     '''
-    process_data('20241226_options_data.csv')
-    plot_trends('20241226_loss_data.csv')
+    plot_iv('20241031_loss_data.csv')
+    # plot_trends('20241031_loss_data.csv')
     # files_names = get_files_names()
     # print(files_names)
     # plot_all_values(files_names)
