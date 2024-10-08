@@ -9,7 +9,7 @@ import numpy as np
 option_columns = ["runid", "stock", "strike", "openint", "coi", "pcio", "vol", "iv",
                   "lp", "chg", "pchg", "tbuy", "tsell", "bqty", "bprc", "aqty", "aprc",
                   "price", "type"]
-
+loss_columns = ['stock', 'runid', 'price', 'tstrike', 'nstrike', 'vol_ce', 'vol_pe', 'iv_ce', 'iv_pe', 'oi_ce', 'oi_pe']
 
 def process_data(filename):
     # dataframe = pd.read_csv(filename)
@@ -179,11 +179,12 @@ def get_files_names():
 
 def plot_all_values(file_names):
     rslt_df1 = pd.read_csv(file_names[0])
-    rslt_df1.columns = ["stock", "run", "price", "loss", "nstrike1", "strike", "max_oi_ce", "max_oi_pe"]
+
+    rslt_df1.columns = loss_columns
     rslt_df1 = rslt_df1[["stock", "run", "price", "nstrike1"]]
 
     rslt_df2 = pd.read_csv(file_names[1])
-    rslt_df2.columns = ["stock", "run", "price", "loss", "nstrike2", "strike", "max_oi_ce", "max_oi_pe"]
+    rslt_df2.columns = loss_columns
     rslt_df2 = rslt_df2[["stock", "run", "nstrike2"]]
     rslt_df = pd.merge(
         left=rslt_df1,
@@ -194,7 +195,7 @@ def plot_all_values(file_names):
     )
 
     rslt_df3 = pd.read_csv(file_names[2])
-    rslt_df3.columns = ["stock", "run", "price", "loss", "nstrike3", "strike", "max_oi_ce", "max_oi_pe"]
+    rslt_df3.columns = loss_columns
     rslt_df3 = rslt_df3[["stock", "run", "nstrike3"]]
     rslt_df = pd.merge(
         left=rslt_df,
@@ -248,7 +249,7 @@ def plot_trends(filename):
         mp.show()
 
 
-def plot_iv(filename):
+def plot_oi(filename):
     rslt_df = pd.read_csv(filename)
     rslt_df.columns = ['stock', 'runid', 'price', 'tstrike', 'nstrike', 'vol_ce', 'vol_pe',
                        'iv_ce', 'iv_pe', 'oi_ce',
@@ -298,8 +299,8 @@ if __name__ == '__main__':
         process_data(file_name)
         print(file_name)
     '''
-    plot_iv('20241031_loss_data.csv')
-    # plot_trends('20241031_loss_data.csv')
+    plot_oi('20241031_loss_data.csv')
+    #plot_trends('20241031_loss_data.csv')
     # files_names = get_files_names()
     # print(files_names)
     # plot_all_values(files_names)

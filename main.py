@@ -9,7 +9,10 @@ import analyse
 import utils
 
 baseurl = "https://www.nseindia.com/"
-url = f"https://www.nseindia.com/api/option-chain-equities?symbol=__stock__"
+options_url = f"https://www.nseindia.com/api/option-chain-equities?symbol=__stock__"
+stock_url = 'https://www.nseindia.com/api/quote-equity?symbol=__stock__'
+stock_trd_url = 'https://www.nseindia.com/api/quote-equity?symbol=__stock__&section=trade_info'
+
 headers = {'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, '
                          'like Gecko) '
                          'Chrome/80.0.3987.149 Safari/537.36',
@@ -18,8 +21,7 @@ headers = {'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/
 
 def capture_options(stock, session, cookies):
     return_data = {}
-    response = session.get(url.replace('__stock__', stock), headers=headers, timeout=5, cookies=cookies)
-    print("{stock} URL Done......".format(stock=stock))
+    response = session.get(options_url.replace('__stock__', stock), headers=headers, timeout=5, cookies=cookies)
     json_data = response.json() if response and response.status_code == 200 else None
 
     if json_data and 'records' in json_data:
@@ -40,7 +42,36 @@ def capture_options(stock, session, cookies):
 
             return_data[expiryDate] = return_list
 
+    print("{stock} options capture Done......".format(stock=stock))
+    return return_data
+
+
+def capture_stock(stock, session, cookies):
+    return_data = []
+    response = session.get(stock_url.replace('__stock__', stock), headers=headers, timeout=5, cookies=cookies)
+    json_data = response.json() if response and response.status_code == 200 else None
+
+    if json_data and 'metadata' in json_data:
+        return_data.append(json_data['metadata']['pdSymbolPe'])
+
+    if json_data and 'priceInfo' in json_data:
+        priceInfo = utils.iterate_nested_json_for_loop(json_data['priceInfo'])
+        return_data += priceInfo.split(",")
+
+    if json_data and 'preOpenMarket' in json_data:
+        preOpenMarket = utils.iterate_json_for_loop(json_data['preOpenMarket'])
+        return_data += preOpenMarket.split(",")
+
+    response = session.get(stock_trd_url.replace('__stock__', stock), headers=headers, timeout=5, cookies=cookies)
+    json_data = response.json() if response and response.status_code == 200 else None
+    if json_data and 'marketDeptOrderBook' in json_data:
+        marketDeptOrderBook = utils.iterate_json_for_loop(json_data['marketDeptOrderBook'])
+        return_data += marketDeptOrderBook.split(",")
+        tradeInfo = utils.iterate_nested_json_for_loop(json_data['marketDeptOrderBook']['tradeInfo'])
+        return_data += tradeInfo.split(",")
+
     print("{stock} capture Done......".format(stock=stock))
+
     return return_data
 
 
@@ -72,9 +103,9 @@ if __name__ == '__main__':
                             outfile.write('\n')
 
                     dataframe = pd.DataFrame([str.split(",") for str in return_data[expiryDate]])
-                    dataframe.columns=["stock", "strike", "openint", "coi", "pcio", "vol", "iv",
-                                             "lp", "chg", "pchg", "tbuy", "tsell", "bqty", "bprc", "aqty", "aprc",
-                                             "price", "type"]
+                    dataframe.columns = ["stock", "strike", "openint", "coi", "pcio", "vol", "iv",
+                                         "lp", "chg", "pchg", "tbuy", "tsell", "bqty", "bprc", "aqty", "aprc",
+                                         "price", "type"]
                     dataframe = dataframe[["stock", "strike", "openint", "price", "vol", "iv", "type"]]
                     dataframe['runid'] = x_label
                     # set dtypes for each column
@@ -93,6 +124,17 @@ if __name__ == '__main__':
 
                     except Exception as err:
                         print(f"calculate_loss - Unexpected {err=}, {type(err)=}")
+
+                try:
+                    return_data = capture_stock(stock, session, cookies)
+                    f_label = xtime.strftime("%y%m")
+                    file_name = f_label + '_stock_data.csv'
+
+                    with open(file_name, 'a') as outfile:
+                        line = ','.join(str(x) for x in return_data)
+                        outfile.write(x_label + ',' + stock + ',' + line + '\n')
+                except Exception as err:
+                    print(f"capture_stock - Unexpected {err=}, {type(err)=}")
 
             print('sleep(900) ......')
             sleep(900)
