@@ -5,11 +5,8 @@ import datetime
 import glob
 from dateutil.relativedelta import relativedelta
 import numpy as np
+from constants import option_columns, loss_columns, stock_columns
 
-option_columns = ["runid", "stock", "strike", "openint", "coi", "pcio", "vol", "iv",
-                  "lp", "chg", "pchg", "tbuy", "tsell", "bqty", "bprc", "aqty", "aprc",
-                  "price", "type"]
-loss_columns = ['stock', 'runid', 'price', 'tstrike', 'nstrike', 'vol_ce', 'vol_pe', 'iv_ce', 'iv_pe', 'oi_ce', 'oi_pe']
 
 def process_data(filename):
     # dataframe = pd.read_csv(filename)
@@ -292,6 +289,24 @@ def plot_oi(filename):
         mp.show()
 
 
+def plot_stock(filename):
+    rslt_df = pd.read_csv(filename, names=stock_columns)
+    rslt_df = rslt_df[["runid", "stock", "lastPrice", "totalTradedVolume"]]
+    unique_stock_set = set(rslt_df['stock'])
+    for stock in unique_stock_set:
+        s_rslt_df = rslt_df.loc[rslt_df['stock'] == stock]
+        s_rslt_df1 = s_rslt_df[["runid", "totalTradedVolume"]]
+        s_rslt_df1 = s_rslt_df1.set_index('runid').diff()
+
+        fig, axs = mp.subplots(2)  # for n subplots
+        axs[0].title.set_text(stock)
+        s_rslt_df.plot(linestyle='solid', y='lastPrice', ax=axs[0]);
+        s_rslt_df1.plot(kind="bar", ax=axs[1]);
+
+
+        mp.show()
+
+
 if __name__ == '__main__':
     '''
     files_names = get_files_names()
@@ -299,8 +314,9 @@ if __name__ == '__main__':
         process_data(file_name)
         print(file_name)
     '''
-    plot_oi('20241031_loss_data.csv')
-    #plot_trends('20241031_loss_data.csv')
+    plot_stock('202410_stock_data.csv')
+    # plot_oi('20241031_loss_data.csv')
+    # plot_trends('20241031_loss_data.csv')
     # files_names = get_files_names()
     # print(files_names)
     # plot_all_values(files_names)

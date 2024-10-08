@@ -1,3 +1,17 @@
+baseurl = "https://www.nseindia.com/"
+options_url = f"https://www.nseindia.com/api/option-chain-equities?symbol=__stock__"
+stock_url = 'https://www.nseindia.com/api/quote-equity?symbol=__stock__'
+stock_trd_url = 'https://www.nseindia.com/api/quote-equity?symbol=__stock__&section=trade_info'
+
+headers = {'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, '
+                         'like Gecko) '
+                         'Chrome/80.0.3987.149 Safari/537.36',
+           'accept-language': 'en,gu;q=0.9,hi;q=0.8', 'accept-encoding': 'gzip, deflate, br'}
+
+option_columns = ["runid", "stock", "strike", "openint", "coi", "pcio", "vol", "iv",
+                  "lp", "chg", "pchg", "tbuy", "tsell", "bqty", "bprc", "aqty", "aprc",
+                  "price", "type"]
+loss_columns = ['stock', 'runid', 'price', 'tstrike', 'nstrike', 'vol_ce', 'vol_pe', 'iv_ce', 'iv_pe', 'oi_ce', 'oi_pe']
 
 nested_json = {
     "strikePrice": 1400,
@@ -19,36 +33,6 @@ nested_json = {
     "askQty": 400,
     "askPrice": 12.3,
     "underlyingValue": 1410.9
-}
-
-priceInfo = {
-    "lastPrice": 928.3,
-    "change": -2.45000000000005,
-    "pChange": -0.263228579102879,
-    "previousClose": 930.75,
-    "open": 942,
-    "close": 927.85,
-    "vwap": 929.05,
-    "stockIndClosePrice": None,
-    "lowerCP": "837.70",
-    "upperCP": "1023.80",
-    "pPriceBand": "No Band",
-    "basePrice": 930.75,
-    "intraDayHighLow": {
-        "min": 915,
-        "max": 944.45,
-        "value": 928.3
-    },
-    "weekHighLow": {
-        "min": 613.7,
-        "minDate": "09-Oct-2023",
-        "max": 1179,
-        "maxDate": "30-Jul-2024",
-        "value": 928.3
-    },
-    "iNavValue": None,
-    "checkINAV": False,
-    "tickSize": 0.05
 }
 
 stockInfo = {
@@ -159,7 +143,7 @@ stockInfo = {
             "maxDate": "30-Jul-2024",
             "value": 899.95
         },
-        "iNavValue": null,
+        "iNavValue": None,
         "checkINAV": False,
         "tickSize": 0.05
     },
@@ -322,3 +306,50 @@ tradeInfo = {
     }
 }
 
+stock_columns = [
+    "runid",
+    "stock",
+    "pdSymbolPe",
+    "lastPrice",
+    "change",
+    "pChange",
+    "previousClose",
+    "open",
+    "close",
+    "vwap",
+    "stockIndClosePrice",
+    "lowerCP",
+    "upperCP",
+    "basePrice",
+    "dmin",
+    "dmax",
+    "dvalue",
+    "w52min",
+    "w52max",
+    "w52value",
+    "tickSize",
+    "poatobuy",
+    "poatosell"
+    "poIEP",
+    "pototalTradedVolume",
+    "pofinalPrice",
+    "pofinalQuantity",
+    "pototalBuyQuantity",
+    "pototalSellQuantity",
+    "poatoBuyQty",
+    "poatoSellQty",
+    "poChange",
+    "poperChange",
+    "poprevClose",
+    "totalBuyQuantity",
+    "totalSellQuantity",
+    "totalTradedVolume",
+    "totalTradedValue",
+    "totalMarketCap",
+    "ffmc",
+    "impactCost",
+    "cmDailyVolatility",
+    "cmAnnualVolatility",
+    "quantityTraded",
+    "deliveryQuantity",
+    "deliveryToTradedQuantity"]

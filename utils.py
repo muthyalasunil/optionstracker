@@ -1,4 +1,7 @@
 import csv
+import pandas as pd
+
+import constants
 
 
 def iterate_nested_json_for_loop(json_obj):
@@ -51,3 +54,7 @@ def rewrite_runid(filename):
             outfile.write(line + '\n')
 
 
+if __name__ == '__main__':
+    rslt_df1 = pd.read_csv('202410_stock_data.csv', names=constants.stock_columns)
+    print(rslt_df1.shape)
+    print(rslt_df1)

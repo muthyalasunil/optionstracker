@@ -7,16 +7,7 @@ from time import sleep
 import pandas as pd
 import analyse
 import utils
-
-baseurl = "https://www.nseindia.com/"
-options_url = f"https://www.nseindia.com/api/option-chain-equities?symbol=__stock__"
-stock_url = 'https://www.nseindia.com/api/quote-equity?symbol=__stock__'
-stock_trd_url = 'https://www.nseindia.com/api/quote-equity?symbol=__stock__&section=trade_info'
-
-headers = {'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, '
-                         'like Gecko) '
-                         'Chrome/80.0.3987.149 Safari/537.36',
-           'accept-language': 'en,gu;q=0.9,hi;q=0.8', 'accept-encoding': 'gzip, deflate, br'}
+from constants import options_url, stock_url, baseurl, headers, stock_trd_url
 
 
 def capture_options(stock, session, cookies):
@@ -69,6 +60,10 @@ def capture_stock(stock, session, cookies):
         return_data += marketDeptOrderBook.split(",")
         tradeInfo = utils.iterate_nested_json_for_loop(json_data['marketDeptOrderBook']['tradeInfo'])
         return_data += tradeInfo.split(",")
+
+    if json_data and 'securityWiseDP' in json_data:
+        securityWiseDP = utils.iterate_json_for_loop(json_data['securityWiseDP'])
+        return_data += securityWiseDP.split(",")
 
     print("{stock} capture Done......".format(stock=stock))
 
@@ -127,7 +122,7 @@ if __name__ == '__main__':
 
                 try:
                     return_data = capture_stock(stock, session, cookies)
-                    f_label = xtime.strftime("%y%m")
+                    f_label = xtime.strftime('%Y%m')
                     file_name = f_label + '_stock_data.csv'
 
                     with open(file_name, 'a') as outfile:
