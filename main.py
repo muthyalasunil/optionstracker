@@ -76,14 +76,16 @@ if __name__ == '__main__':
 
     file_path = '_options_data.json'
 
-    for x in range(25):
+    for x in range(60):
         xtime = datetime.datetime.now()
         x_label = xtime.strftime("%m%d%H%M")
         print(x_label)
         try:
             session = requests.Session()
             request = session.get(baseurl, headers=headers, timeout=5)
+            print('------------------------------------------------------')
             print('Done baseurl ......')
+            print('------------------------------------------------------')
             cookies = dict(request.cookies)
 
             for stock in stocks:
@@ -132,7 +134,7 @@ if __name__ == '__main__':
                     print(f"capture_stock - Unexpected {err=}, {type(err)=}")
 
             print('sleep(900) ......')
-            sleep(900)
+            sleep(300)
 
         except Exception as err:
             print(f"main - Unexpected {err=}, {type(err)=}")
