@@ -151,13 +151,13 @@ def plot_oi(filename):
     unique_stock_set = set(loss_df['stock'])
 
     for stock in unique_stock_set:
-        loss_df_ = loss_df.loc[loss_df['stock'] == stock]
-        oi_ce_set = set(loss_df_['oi_ce'])
-        oi_pe_set = set(loss_df_['oi_pe'])
+        _loss_df = loss_df.loc[loss_df['stock'] == stock]
+        oi_ce_set = set(_loss_df['oi_ce'])
+        oi_pe_set = set(_loss_df['oi_pe'])
         options_df = pd.read_csv(filename.replace('loss', 'options'), names=option_columns)
 
         options_df = options_df.loc[options_df['stock'] == stock]
-        options_df = options_df[['runid', 'price', 'strike', 'openint', 'type']]
+        options_df = options_df[['runid', 'price', 'strike', 'openint', 'vol', 'type']]
 
         rslt_df_pe = options_df.loc[options_df['type'] == 'PE']
         rslt_df_pe = rslt_df_pe[rslt_df_pe['strike'].isin(list(oi_pe_set))]
@@ -167,22 +167,36 @@ def plot_oi(filename):
         rslt_df_ce = rslt_df_ce[rslt_df_ce['strike'].isin(list(oi_ce_set))]
         plot_df_ce = pd.DataFrame(sorted(set(rslt_df_ce['runid'])), columns=['runid'])
 
+        s_filename = filename.split('_')[0][0:-2] + '_stock_data.csv'
+        s_rslt_df = pd.read_csv(s_filename, names=stock_columns)
+        s_rslt_df = s_rslt_df[["runid", "stock", "lastPrice", "totalTradedVolume"]]
+        s_rslt_df = s_rslt_df.loc[s_rslt_df['stock'] == stock]
+        lastPrice = s_rslt_df['lastPrice'].values[-1]
+
+        s_rslt_df['day'] = s_rslt_df["runid"] / 10000
+        s_rslt_df['day'] = s_rslt_df['day'].astype('int')
+        s_rslt_df['tradedVolume'] = s_rslt_df.groupby('day')['totalTradedVolume'].diff().fillna(0)
+
         fig, axs = mp.subplots(3)  # for n subplots
-        axs[0].title.set_text(stock)
-        loss_df_.plot(linestyle='solid', y='price', ax=axs[0]);
+        axs[0].title.set_text(stock='_' + str(lastPrice))
+        s_rslt_df.plot(linestyle='solid', y='lastPrice', ax=axs[0])
+        s_rslt_df.plot(kind='bar', y='tradedVolume', ax=axs[0]);
+
         for strike in oi_ce_set:
             rslt_df = rslt_df_ce.loc[rslt_df_ce['strike'] == strike]
-            rslt_df = rslt_df[['runid', 'openint']]
-            rslt_df = rslt_df.rename(columns={'openint': str(strike)+'_ce'})
+            rslt_df = rslt_df[['runid', 'vol', 'openint']]
+            rslt_df = rslt_df.rename(columns={'vol': str(strike) + '_cv', 'openint': str(strike) + '_oi'})
             plot_df_ce = plot_df_ce.merge(rslt_df, left_on='runid', right_on='runid')
-            plot_df_ce.plot(linestyle='solid', y=str(strike)+'_ce', ax=axs[1]);
+            plot_df_ce.plot(linestyle='dotted', y=str(strike) + '_oi', ax=axs[1])
+            plot_df_ce.plot(linestyle='solid', y=str(strike) + '_cv', ax=axs[1])
 
         for strike in oi_pe_set:
             rslt_df = rslt_df_pe.loc[rslt_df_pe['strike'] == strike]
-            rslt_df = rslt_df[['runid', 'openint']]
-            rslt_df = rslt_df.rename(columns={'openint': str(strike)+'_pe'})
+            rslt_df = rslt_df[['runid', 'vol', 'openint']]
+            rslt_df = rslt_df.rename(columns={'vol': str(strike) + '_pv', 'openint': str(strike) + '_oi'})
             plot_df_pe = plot_df_pe.merge(rslt_df, left_on='runid', right_on='runid')
-            plot_df_pe.plot(linestyle='solid', y=str(strike)+'_pe', ax=axs[2]);
+            plot_df_pe.plot(linestyle='dotted', y=str(strike) + '_oi', ax=axs[2])
+            plot_df_pe.plot(linestyle='solid', y=str(strike) + '_pv', ax=axs[2])
 
             mp.show()
 
@@ -230,42 +244,6 @@ def plot_stock(filename, lfilename):
 
         loss_df = orslt_df.loc[orslt_df['stock'] == stock]
         nstrike = loss_df['nstrike'].values[-1]
-        '''
-        option_df = pd.read_csv(lfilename.replace('loss', 'options'), names=option_columns)
-        option_df = option_df.loc[option_df['stock'] == stock]
-        option_df = option_df.loc[option_df['strike'] == nstrike]b
-        pe_df = option_df.loc[option_df['type'] == 'PE']
-        pe_df = pe_df.rename(columns={"openint": 'oi_pe', 'vol': 'vol_pe'})
-        pe_df['day'] = pe_df["runid"] / 10000
-        pe_df['day'] = pe_df['day'].astype('int')
-        pe_df['tradedPE'] = pe_df.groupby('day')['vol_pe'].diff().fillna(0)
-        pe_df['tradedPE'] = np.where(pe_df['tradedPE'] == 0, pe_df['vol_pe'],
-                                              pe_df['tradedPE'])
-
-        ce_df = option_df.loc[option_df['type'] == 'CE']
-        ce_df = ce_df.rename(columns={"openint": 'oi_ce', 'vol': 'vol_ce'})
-        ce_df['day'] = ce_df["runid"] / 10000
-        ce_df['day'] = ce_df['day'].astype('int')
-        ce_df['tradedCE'] = ce_df.groupby('day')['vol_ce'].diff().fillna(0)
-        ce_df['tradedCE'] = np.where(ce_df['tradedCE'] == 0, ce_df['vol_ce'],
-                                              ce_df['tradedCE'])
-        s_rslt_df1 = pd.merge(
-            left=s_rslt_df1,
-            right=pe_df,
-            how='inner',
-            left_on=['runid'],
-            right_on=['runid'],
-        )
-
-        s_rslt_df1 = pd.merge(
-            left=s_rslt_df1,
-            right=ce_df,
-            how='inner',
-            left_on=['runid'],
-            right_on=['runid'],
-        )
-        '''
-
         s_rslt_df = pd.merge(
             left=s_rslt_df,
             right=loss_df,
@@ -284,18 +262,8 @@ def plot_stock(filename, lfilename):
         s_rslt_df.plot(linestyle='dashdot', y='vol_ce', ax=axs[1]);
         s_rslt_df.plot(linestyle='dashdot', y='vol_pe', ax=axs[1]);
 
-        s_rslt_df.plot(linestyle='dotted', y='totalTradedVolume', ax=axs[2]);
+        # s_rslt_df.plot(linestyle='dotted', y='totalTradedVolume', ax=axs[2]);
         s_rslt_df.plot(kind='bar', y='tradedVolume', ax=axs[2]);
-        '''
-        s_rslt_df1.plot(linestyle='solid', y='oi_ce', ax=axs[2]);
-        s_rslt_df1.plot(linestyle='dotted', y='vol_ce', ax=axs[3]);
-
-        s_rslt_df1.plot(linestyle='solid', y='oi_pe', ax=axs[2]);
-        s_rslt_df1.plot(linestyle='dotted', y='vol_pe', ax=axs[3]);
-
-        #s_rslt_df1.plot(linestyle='solid', y='oi_ce', ax=axs[3]);
-        #s_rslt_df1.plot(linestyle='solid', y='oi_pe', ax=axs[3]);
-        '''
 
         mp.show()
 
@@ -307,8 +275,8 @@ if __name__ == '__main__':
         process_data(file_name)
         print(file_name)
     '''
-    plot_stock('202410_stock_data.csv', '20241031_loss_data.csv')
-    # plot_oi('20241031_loss_data.csv')
+    # plot_stock('202410_stock_data.csv', '20241031_loss_data.csv')
+    plot_oi('20241031_loss_data.csv')
     # plot_trends('20241031_loss_data.csv')
     # files_names = get_files_names()
     # print(files_names)
