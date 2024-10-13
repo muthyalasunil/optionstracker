@@ -177,26 +177,26 @@ def plot_oi(filename):
         s_rslt_df['day'] = s_rslt_df['day'].astype('int')
         s_rslt_df['tradedVolume'] = s_rslt_df.groupby('day')['totalTradedVolume'].diff().fillna(0)
 
-        fig, axs = mp.subplots(3)  # for n subplots
-        axs[0].title.set_text(stock='_' + str(lastPrice))
+        fig, axs = mp.subplots(4)  # for n subplots
+        axs[0].title.set_text(stock+'_' + str(lastPrice))
         s_rslt_df.plot(linestyle='solid', y='lastPrice', ax=axs[0])
-        s_rslt_df.plot(kind='bar', y='tradedVolume', ax=axs[0]);
+        s_rslt_df.plot(kind='bar', y='tradedVolume', ax=axs[1]);
 
         for strike in oi_ce_set:
             rslt_df = rslt_df_ce.loc[rslt_df_ce['strike'] == strike]
             rslt_df = rslt_df[['runid', 'vol', 'openint']]
             rslt_df = rslt_df.rename(columns={'vol': str(strike) + '_cv', 'openint': str(strike) + '_oi'})
             plot_df_ce = plot_df_ce.merge(rslt_df, left_on='runid', right_on='runid')
-            plot_df_ce.plot(linestyle='dotted', y=str(strike) + '_oi', ax=axs[1])
-            plot_df_ce.plot(linestyle='solid', y=str(strike) + '_cv', ax=axs[1])
+            plot_df_ce.plot(linestyle='dotted', y=str(strike) + '_oi', ax=axs[2])
+            plot_df_ce.plot(linestyle='solid', y=str(strike) + '_cv', ax=axs[2])
 
         for strike in oi_pe_set:
             rslt_df = rslt_df_pe.loc[rslt_df_pe['strike'] == strike]
             rslt_df = rslt_df[['runid', 'vol', 'openint']]
             rslt_df = rslt_df.rename(columns={'vol': str(strike) + '_pv', 'openint': str(strike) + '_oi'})
             plot_df_pe = plot_df_pe.merge(rslt_df, left_on='runid', right_on='runid')
-            plot_df_pe.plot(linestyle='dotted', y=str(strike) + '_oi', ax=axs[2])
-            plot_df_pe.plot(linestyle='solid', y=str(strike) + '_pv', ax=axs[2])
+            plot_df_pe.plot(linestyle='dotted', y=str(strike) + '_oi', ax=axs[3])
+            plot_df_pe.plot(linestyle='solid', y=str(strike) + '_pv', ax=axs[3])
 
             mp.show()
 
